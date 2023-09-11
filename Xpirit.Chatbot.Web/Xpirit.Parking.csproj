@@ -7,13 +7,16 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="7.0.7" />
-    <PackageReference Include="MongoDB.Driver" Version="2.21.0" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
+    <Compile Remove="Controllers\Parking\Dto\**" />
+    <Content Remove="Controllers\Parking\Dto\**" />
+    <EmbeddedResource Remove="Controllers\Parking\Dto\**" />
+    <None Remove="Controllers\Parking\Dto\**" />
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Controllers\Parking\Dto\" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="7.0.7" />
+    <PackageReference Include="MongoDB.Driver" Version="2.21.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
   </ItemGroup>
 
   <ItemGroup>
