@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net7.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Controllers\Parking\Dto\**" />
+    <Content Remove="Controllers\Parking\Dto\**" />
+    <EmbeddedResource Remove="Controllers\Parking\Dto\**" />
+    <None Remove="Controllers\Parking\Dto\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="7.0.7" />
+    <PackageReference Include="MongoDB.Driver" Version="2.21.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Xpirit.Chatbot.Domain\Xpirit.Chatbot.Domain.csproj" />
+    <ProjectReference Include="..\Xpirit.Chatbot.Infrastructure\Xpirit.Chatbot.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>
