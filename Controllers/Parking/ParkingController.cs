@@ -1,71 +1,85 @@
-using Microsoft.AspNetCore.Mvc;
 using System.Globalization;
+using Microsoft.AspNetCore.Mvc;
+using Xpirit.Chatbot.Domain.Contracts;
+using Xpirit.Chatbot.Domain.Entities;
 
-namespace Xpirit.Parking.Controllers.Parking
+[ApiController]
+[Route("[controller]")]
+public class ParkingController : ControllerBase
 {
-    [ApiController]
-    [Route("[controller]")]
-    public class ParkingController : ControllerBase
-    {
-        private static List<Tuple<string, DateTime, string>> _reservations = new List<Tuple<string, DateTime, string>>();
-        private static List<string> _parkingSpots = new List<string> { "Parking42", "Parking43", "Parking44" };
+	private readonly IParkingRepository _parkingRepository;
+	private static List<string> _parkingSpots = new() { "Parking 42", "Parking 43", "Parking 44" };
 
-        [HttpGet]
-        public ActionResult<IEnumerable<string>> GetParkingSpots()
-        {
-            return Ok(_parkingSpots);
-        }
+	public ParkingController(IParkingRepository parkingRepository)
+	{
+		_parkingRepository = parkingRepository;
+	}
 
-        [HttpGet("Reservations")]
-        public ActionResult<IEnumerable<Tuple<string, DateTime, string>>> GetAllReservations()
-        {
-            return Ok(_reservations);
-        }
+	[HttpGet]
+	public ActionResult<IEnumerable<string>> GetParkingSpots()
+	{
+		return Ok(_parkingSpots);
+	}
 
-        [HttpGet("Reservations/Available")]
-        public ActionResult<IEnumerable<string>> GetAvalableParkingSpotsForDate(DateTime? requestedDate)
-        {
-            if (requestedDate == null)
-            {
-                return BadRequest($"{nameof(requestedDate)} is not filled in");
-            }
+	[HttpGet("Reservations")]
+	public async Task<ActionResult<IEnumerable<ParkingReservation>>> GetAllReservations()
+	{
+		var reservations = await _parkingRepository.GetAllReservationsAsync();
+		return Ok(reservations);
+	}
 
-            var alreadyReservedparkingSpots = _reservations.Where(x => x.Item2 == requestedDate.Value.Date).Select(x => x.Item1).ToList();
-            var freeParkingSpots = _parkingSpots.Where(x => !alreadyReservedparkingSpots.Contains(x)).ToList();
+	[HttpGet("Reservations/Available")]
+	public async Task<ActionResult<IEnumerable<string>>> GetAvailableParkingSpotsForDate(DateTime? requestedDate)
+	{
+		if (!requestedDate.HasValue)
+		{
+			return BadRequest($"{nameof(requestedDate)} is not filled in");
+		}
 
-            return Ok(freeParkingSpots);
-        }
+		var reservationsForDate = await _parkingRepository.GetReservationsByDateAsync(requestedDate.Value);
+		var alreadyReservedParkingSpots = reservationsForDate.Select(r => r.ParkingSpot).ToList();
+		var freeParkingSpots = _parkingSpots.Where(x => !alreadyReservedParkingSpots.Contains(x)).ToList();
 
-        [HttpPost("Reservation")]
-        public ActionResult<string> MakeReservation(string? requestedDate, string personName)
-        {
-            if (requestedDate == null)
-            {
-                return BadRequest($"{nameof(requestedDate)} is not filled in");
-            }
+		return Ok(freeParkingSpots);
+	}
 
-            if (!DateTime.TryParseExact(requestedDate, "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime parsedDate))
-            {
-                return BadRequest($"{nameof(requestedDate)} is not a valid date");
-            }
+	[HttpPost("Reservation")]
+	public async Task<ActionResult<string>> MakeReservation(string? requestedDate, string personName)
+	{
+		if (string.IsNullOrEmpty(requestedDate))
+		{
+			return BadRequest($"{nameof(requestedDate)} is not filled in");
+		}
 
-            if (string.IsNullOrEmpty(personName))
-            {
-                return BadRequest($"{nameof(personName)} is not filled in");
-            }
+		if (!DateTime.TryParseExact(requestedDate, "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime parsedDate))
+		{
+			return BadRequest($"{nameof(requestedDate)} is not a valid date");
+		}
 
-            var alreadyReservedparkingSpots = _reservations.Where(x => x.Item2 == parsedDate.Date).Select(x => x.Item1).ToList();
-            var freeParkingSpot = _parkingSpots.FirstOrDefault(x => !alreadyReservedparkingSpots.Contains(x));
+		if (string.IsNullOrEmpty(personName))
+		{
+			return BadRequest($"{nameof(personName)} is not filled in");
+		}
 
-            if (string.IsNullOrEmpty(freeParkingSpot))
-            {
-                return BadRequest($"No parking spots free for date {requestedDate}");
-            }
-            else
-            {
-                _reservations.Add(new Tuple<string, DateTime, string>(freeParkingSpot, parsedDate, personName));
-                return Ok(freeParkingSpot);
-            }
-        }
-    }
+		var reservationsForDate = await _parkingRepository.GetReservationsByDateAsync(parsedDate);
+		var alreadyReservedParkingSpots = reservationsForDate.Select(r => r.ParkingSpot).ToList();
+		var freeParkingSpot = _parkingSpots.FirstOrDefault(x => !alreadyReservedParkingSpots.Contains(x));
+
+		if (string.IsNullOrEmpty(freeParkingSpot))
+		{
+			return BadRequest($"No parking spots free for date {requestedDate}");
+		}
+		else
+		{
+			var newReservation = new ParkingReservation
+			{
+				ParkingSpot = freeParkingSpot,
+				ReservedDate = parsedDate,
+				PersonName = personName
+			};
+
+			await _parkingRepository.InsertReservationAsync(newReservation);
+			return Ok(freeParkingSpot);
+		}
+	}
 }
